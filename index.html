@@ -3,7 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>플랜머니</title>
+<title>플랜머니 — 미래 현금흐름 시뮬레이터</title>
+
+<!-- 검색 엔진용 설명 -->
+<meta name="description" content="플랜머니는 수입·지출·자산·부채를 입력해 미래 순자산과 현금흐름을 연도별·월별로 시뮬레이션하는 무료 재무 계획 도구입니다. 부채 상환 전략, 자산 배분, 목표 적립금까지 한눈에.">
+<meta name="keywords" content="현금흐름 시뮬레이터, 재무 계획, 순자산 계산기, 노후 준비, 자산 배분, 부채 상환, 플랜머니">
+<meta name="author" content="PlanMoney">
+
+<!-- 카카오톡·페이스북 등 공유 미리보기(Open Graph) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="플랜머니 — 미래 현금흐름 시뮬레이터">
+<meta property="og:description" content="수입·지출·자산·부채를 입력하면 미래 순자산과 현금흐름을 한눈에. 부채 상환 전략과 목표 적립금까지 시뮬레이션하는 무료 재무 계획 도구.">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="플랜머니">
+
+<!-- 트위터(X) 공유 카드 -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="플랜머니 — 미래 현금흐름 시뮬레이터">
+<meta name="twitter:description" content="수입·지출·자산·부채를 입력하면 미래 순자산과 현금흐름을 한눈에. 무료 재무 계획 도구.">
+
+<!-- 브라우저 탭 아이콘(이모지 파비콘) -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -404,8 +424,8 @@ en:{
   secBasic:'Settings', secIncome:'Income', secExpense:'Expense', secAsset:'Assets & Debts', secAlloc:'Allocation Strategy',
   inputBasis:'Input basis', basisYear:'By year', basisAge:'By age', startYear:'Start year', curAge:'Current age',
   simUnit:'Simulation unit', granYear:'Yearly', granMonth:'Monthly', simPeriod:'Simulation period',
-  inputUnit:'Input unit', unitWon:'KRW', unitThousand:'×1K', unitMan:'×10K', unitTenMan:'×100K', unitMillion:'×1M', unitEok:'×100M',
-  uopt1:'KRW (×1)', uopt1000:'×1,000', uopt10000:'×10,000', uopt100000:'×100,000', uopt1000000:'×1,000,000', uopt100000000:'×100,000,000',
+  inputUnit:'Input unit', unitWon:'$', unitThousand:'×1K', unitMan:'×10K', unitTenMan:'×100K', unitMillion:'×1M', unitEok:'×100M',
+  uopt1:'$ (×1)', uopt1000:'×1,000', uopt10000:'×10,000', uopt100000:'×100,000', uopt1000000:'×1,000,000', uopt100000000:'×100,000,000',
   goalEnable:'🎯 Savings goal', goalFixed:'Fixed amount', goalAnnuity:'Annuity-based', goalAmount:'Goal amount',
   recvAge:'Start', endAge:'End', monthlyPension:'Monthly pension', pensionRate:'Pension interest rate',
   itemName:'Name', amount:'Amount', curHolding:'Current holding', category:'Type', asset:'Asset', debt:'Debt',
@@ -454,7 +474,7 @@ function setLang(l){
 function applyStaticI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML=t(el.getAttribute('data-i18n-html')); });
-  document.title=t('appTitle');
+  document.title=t('appTitle')+(lang==='en'?' — Cashflow Simulator':' — 미래 현금흐름 시뮬레이터');
   // 언어 전환 시 동적 라벨도 갱신: 시작연도/나이, 테이블 기간 헤더, 단위 설명
   const sl=document.getElementById('startLabel'); if(sl) sl.textContent=basis==='age'?t('curAge'):t('startYear');
   const thp=document.getElementById('th-period'); if(thp) thp.textContent=basis==='age'?t('tablePeriodAge'):t('tablePeriodYear');
@@ -564,7 +584,7 @@ function clampFlowStarts(){
 // ── Format ──
 function fmt(n){
   const abs=Math.abs(n), sign=n<0?'-':'';
-  if(lang==='en'){ return sign+'₩'+Math.round(abs).toLocaleString(); }   // 영어: ₩ + 천단위 콤마
+  if(lang==='en'){ return sign+'$'+Math.round(abs).toLocaleString(); }   // 영어: $ + 천단위 콤마
   if(abs>=1e8){const e=Math.floor(abs/1e8),m=Math.floor((abs%1e8)/1e4);return sign+(m>0?`${e.toLocaleString()}억 ${m.toLocaleString()}만원`:`${e.toLocaleString()}억원`);}
   if(abs>=1e4)return sign+Math.floor(abs/1e4).toLocaleString()+'만원';
   return sign+'₩'+Math.round(abs).toLocaleString();
@@ -572,10 +592,10 @@ function fmt(n){
 function fmtShort(n){
   const abs=Math.abs(n),sign=n<0?'-':'';
   if(lang==='en'){ // 영어: B(십억)/M(백만)/K(천)
-    if(abs>=1e9)return sign+'₩'+(abs/1e9).toFixed(1)+'B';
-    if(abs>=1e6)return sign+'₩'+(abs/1e6).toFixed(1)+'M';
-    if(abs>=1e3)return sign+'₩'+Math.round(abs/1e3)+'K';
-    return sign+'₩'+Math.round(abs).toLocaleString();
+    if(abs>=1e9)return sign+'$'+(abs/1e9).toFixed(1)+'B';
+    if(abs>=1e6)return sign+'$'+(abs/1e6).toFixed(1)+'M';
+    if(abs>=1e3)return sign+'$'+Math.round(abs/1e3)+'K';
+    return sign+'$'+Math.round(abs).toLocaleString();
   }
   if(abs>=1e12)return sign+(abs/1e12).toFixed(1)+'조';
   if(abs>=1e8)return sign+(abs/1e8).toFixed(1)+'억';
