@@ -224,7 +224,7 @@
         <option value="1000000" data-i18n="uopt1000000">백만원 (백만)</option>
         <option value="100000000" data-i18n="uopt100000000">억원 (억)</option>
       </select>
-      <span class="unit-desc" id="unitDesc">입력값 × 10,000 = 실제 금액</span>
+      <span class="unit-desc" id="unitDesc">입력값 × 10,000 = 실제 KRW</span>
     </div>
 
     <div class="section">
@@ -506,8 +506,8 @@ const DEBT_COLORS  = ['#dc2626','#ea580c','#d97706','#be123c','#b91c1c','#c2410c
 function getUnit(){ return parseFloat(document.getElementById('unitSelect').value)||10000; }
 function getUnitLabel(){ const m={1:'unitWon',1000:'unitThousand',10000:'unitMan',100000:'unitTenMan',1000000:'unitMillion',100000000:'unitEok'}; return t(m[getUnit()]||'unitWon'); }
 function unitDescText(v){
-  if(lang==='en'){ return v===1?'input = actual KRW':('input × '+v.toLocaleString()+' = actual KRW'); }
-  const d={1:'입력값 = 실제 금액(원)',1000:'입력값 × 1,000 = 실제 금액',10000:'입력값 × 10,000 = 실제 금액',100000:'입력값 × 100,000 = 실제 금액',1000000:'입력값 × 1,000,000 = 실제 금액',100000000:'입력값 × 100,000,000 = 실제 금액'}; return d[v]||'';
+  if(lang==='en'){ return v===1?'input = actual USD':('input × '+v.toLocaleString()+' = actual USD'); }
+  return v===1?'입력값 = 실제 KRW':('입력값 × '+v.toLocaleString()+' = 실제 KRW');
 }
 function onUnitChange(){ document.getElementById('unitDesc').textContent=unitDescText(getUnit()); renderAll(); update(); }
 function toRaw(d){ return safeNum(d,0)*getUnit(); }
@@ -763,11 +763,37 @@ function addItem(type,data){
   (type==='income'?incomeItems:expenseItems).push(item); renderItems(); update();
 }
 function removeItem(type,id){ if(type==='income')incomeItems=incomeItems.filter(i=>i.id!==id); else expenseItems=expenseItems.filter(i=>i.id!==id); renderItems(); update(); }
+// ── 수입/지출 증가 방식: 자산과 동일한 growth 구조 사용 ──
+// growth:{ mode:'fixed'|'rate'|'custom', amount(연증가액,원), rate(연증가율%), segments:[{end,method:'amount'|'rate',value}] }
+function getFlowItem(type,id){ return (type==='income'?incomeItems:expenseItems).find(i=>i.id===id); }
+// 하위호환: growth 없으면 기존 rate를 mode='rate'로 승격. 누락 필드 보정.
+function ensureFlowGrowth(it){
+  if(!it.growth){ it.growth={ mode:'rate', amount:0, rate:safeNum(it.rate,0), segments:defaultSegments() }; }
+  if(it.growth.amount===undefined)it.growth.amount=0;
+  if(it.growth.rate===undefined)it.growth.rate=safeNum(it.rate,0);
+  if(!Array.isArray(it.growth.segments)||it.growth.segments.length<2) it.growth.segments=defaultSegments();
+  return it.growth;
+}
+function setFlowGrowthMode(type,id,mode){ const it=getFlowItem(type,id); if(!it)return; ensureFlowGrowth(it).mode=mode; renderItems(); update(); }
+// 정액 연증가액(원,음수방지) / 정률 연증가율%(-50~100)
+function setFlowGrowthVal(type,id,field,val){ const it=getFlowItem(type,id); if(!it)return; const g=ensureFlowGrowth(it);
+  g[field]= field==='rate' ? clamp(val,-50,100) : nonNeg(val);
+  if(field==='rate')it.rate=g.rate;   // 표시/엑셀 호환 위해 it.rate도 동기화
+  update(); }
+function addFlowSegment(type,id,idx){ const it=getFlowItem(type,id); if(!it)return; const g=ensureFlowGrowth(it); g.segments.splice(idx+1,0,{end:(basis==='age'?ageToYear(40):CUR_YEAR+20),method:'rate',value:2}); renderItems(); update(); }
+function removeFlowSegment(type,id,idx){ const it=getFlowItem(type,id); if(!it)return; const g=ensureFlowGrowth(it); if(g.segments.length<=2)return; g.segments.splice(idx,1); renderItems(); update(); }
+// 구간 필드: end=종료시점, method=amount|rate, value=금액(원,음수방지) 또는 비율%(-50~100). 자산 setSegField와 동일 규칙.
+function setFlowSegField(type,id,idx,field,val){ const it=getFlowItem(type,id); if(!it)return; const g=ensureFlowGrowth(it); const seg=g.segments[idx]; if(!seg)return;
+  if(field==='end')seg.end=fieldToYear(val);
+  else if(field==='method'){seg.method=val;renderItems();}
+  else if(field==='value'){ seg.value = seg.method==='amount' ? nonNeg(val) : clamp(val,-50,100); }
+  else seg[field]=val;
+  update(); }
 // 수입/지출 필드 검증: amount=금액(원,음수방지), rate=증가율%(-50~100), start/end=시점(실제연도|null)
 function setField(type,id,field,val){
   const arr=type==='income'?incomeItems:expenseItems; const it=arr.find(i=>i.id===id); if(!it)return;
   if(field==='amount')it.amount=toRaw(nonNeg(val));
-  else if(field==='rate')it.rate=clamp(val,-50,100);
+  else if(field==='rate'){ it.rate=clamp(val,-50,100); ensureFlowGrowth(it).rate=it.rate; }
   else if(field==='start'){ const y=fieldToYear(val)??realStartYear(); it.start=Math.max(y, realStartYear()); }  // 현재 시작 이상으로 보정
   else if(field==='end')it.end=fieldToYear(val);
   else { it[field]=val; if(field==='name') delete it.nameKey; }  // 사용자가 이름 수정 → 번역키 해제
@@ -780,9 +806,39 @@ function renderList(elId,items,type){
   items.forEach(it=>{
     // 시작 시점이 현재(시작 연도/나이)보다 작으면 현재로 자동 보정
     if(it.start!=null && it.start<realStartYear()) it.start=realStartYear();
+    const g=ensureFlowGrowth(it);
     const dispAmt=it.amount/unit, startDisp=yearToField(it.start), endDisp=(it.end===null||it.end===undefined)?'':yearToField(it.end);
     // 시작 > 종료 이면 해당 항목은 계산에서 제외(0원)되므로 사용자에게 경고 표시
     const badRange = (it.end!==null&&it.end!==undefined&&it.start!==null&&it.start!==undefined&&it.start>it.end);
+    // 증가 방식별 세부 입력(자산 renderAssets와 동일 구조). fixed=연증가액, rate=연증가율, custom=구간별(금액/비율)
+    let growthDetail='';
+    if(g.mode==='fixed'){
+      growthDetail=`<div class="row-mt"><div class="item-grid-label">${t('yearlyIncrease')} (${label})</div>
+        <div class="input-wrap"><input type="number" value="${g.amount/unit}" step="1" oninput="setFlowGrowthVal('${type}','${it.id}','amount',(+this.value)*${unit})"><span class="input-unit-tag">${label}</span></div></div>`;
+    } else if(g.mode==='rate'){
+      growthDetail=`<div class="row-mt"><div class="item-grid-label" title="${t('incRateHint')}">${t('yearlyRate')} (%) ⓘ</div>
+        <input type="number" class="input" value="${g.rate}" step="0.1" min="-50" max="100" title="${t('incRateHint')}" oninput="setFlowGrowthVal('${type}','${it.id}','rate',+this.value)"></div>`;
+    } else if(g.mode==='custom'){
+      growthDetail=`<div class="seg-box row-mt"><div class="seg-box-title">${t('segTitle')} (${periodWord})</div>
+      ${g.segments.map((seg,idx)=>{
+        const isLast=idx===g.segments.length-1, endVal=isLast?'':yearToField(seg.end);
+        const valLabel=seg.method==='amount'?`${t('increaseAmt')}(${label})`:`${t('increaseRate')}(%)`, valDisp=seg.method==='amount'?(seg.value/unit):seg.value;
+        return `<div class="seg-row">
+          <div class="seg-field"><div class="seg-field-label">${t('segEnd')} ${periodWord}</div>
+            ${isLast?`<div class="seg-final-tag">${t('applyAfter')}</div>`:`<input type="number" value="${endVal}" oninput="setFlowSegField('${type}','${it.id}',${idx},'end',this.value)" placeholder="${periodWord}">`}</div>
+          <div class="seg-field" style="flex:0 0 96px;"><div class="seg-field-label">${t('method')}</div>
+            <div class="seg-method">
+              <label class="seg-check"><input type="checkbox" ${seg.method==='amount'?'checked':''} onclick="setFlowSegField('${type}','${it.id}',${idx},'method','amount')">${t('amtLabel')}</label>
+              <label class="seg-check"><input type="checkbox" ${seg.method==='rate'?'checked':''} onclick="setFlowSegField('${type}','${it.id}',${idx},'method','rate')">${t('pctLabel')}</label>
+            </div></div>
+          <div class="seg-field"><div class="seg-field-label">${valLabel}</div>
+            <input type="number" value="${valDisp}" step="${seg.method==='amount'?'1':'0.1'}" oninput="setFlowSegField('${type}','${it.id}',${idx},'value',${seg.method==='amount'}?(+this.value)*${unit}:+this.value)"></div>
+          <div class="seg-btns">
+            <button class="seg-mini-btn" onclick="addFlowSegment('${type}','${it.id}',${idx})">+</button>
+            <button class="seg-mini-btn" ${g.segments.length<=2?'disabled':''} onclick="removeFlowSegment('${type}','${it.id}',${idx})">−</button>
+          </div></div>`;
+      }).join('')}</div>`;
+    }
     const div=document.createElement('div'); div.className='item-card';
     div.innerHTML=`
       <div class="item-card-header">
@@ -796,9 +852,13 @@ function renderList(elId,items,type){
           <select class="input" onchange="setField('${type}','${it.id}','period',this.value)">
             <option value="month" ${it.period==='month'?'selected':''}>${t('monthly')}</option>
             <option value="year" ${it.period==='year'?'selected':''}>${t('yearly')}</option></select></div>
-        <div><div class="item-grid-label" title="${t('incRateHint')}">${t('incRate')} ⓘ</div>
-          <input type="number" class="input" value="${it.rate}" step="0.1" min="-50" max="100" title="${t('incRateHint')}" oninput="setField('${type}','${it.id}','rate',+this.value)"></div>
+        <div><div class="item-grid-label">${t('growthMode')}</div>
+          <select class="input" onchange="setFlowGrowthMode('${type}','${it.id}',this.value)">
+            <option value="fixed" ${g.mode==='fixed'?'selected':''}>${t('fixed')}</option>
+            <option value="rate" ${g.mode==='rate'?'selected':''}>${t('rate')}</option>
+            <option value="custom" ${g.mode==='custom'?'selected':''}>${t('custom')}</option></select></div>
       </div>
+      ${growthDetail}
       <div class="item-grid2 row-mt">
         <div><div class="item-grid-label">${t('startP')} ${periodWord}</div>
           <input type="number" class="input" value="${startDisp}" oninput="setField('${type}','${it.id}','start',this.value)" placeholder="${periodWord}"></div>
@@ -973,23 +1033,62 @@ function activeInYear(it,year){
   const e=(it.end===null||it.end===undefined)?Infinity:it.end;
   return year>=s&&year<=e;
 }
-// 그 해 수입/지출 연액. 월별이면 ×12, 시작연도 이후 경과연수만큼 증가율 복리 적용. 비활성이면 0.
+// 수입/지출 그 해(yr) 연액(증가 적용 후). fixed/custom 공통: 시작연도 base에서 매 연도 구간 규칙을 순차 적용.
+//  - fixed: 매 연도 +연증가액(g.amount)
+//  - custom amount 구간: 매 연도 +그 구간 금액(seg.value)
+//  - custom rate 구간 / rate모드: 매 연도 ×(1+율)
+function flowAnnualAt(it,yr){
+  const g=it.growth; const start=it.start??yr;
+  const base=it.period==='month'?it.amount*12:it.amount;
+  if(!g||g.mode==='rate'){ const rate=g?g.rate:it.rate; return base*Math.pow(1+rate/100,Math.max(0,yr-start)); }
+  let v=base;
+  for(let y=start; y<yr; y++){
+    if(g.mode==='fixed'){ v+=nonNeg(g.amount); }
+    else { // custom
+      const seg=pickSegment(g.segments,y);
+      if(seg&&seg.method==='amount') v+=nonNeg(seg.value);
+      else { const r=seg?clamp(seg.value,-50,100)/100:0; v*=(1+r); }
+    }
+  }
+  return v;
+}
+// 그 해 수입/지출 연액. 비활성이면 0.
 function calcFlow(it,year){
   if(!activeInYear(it,year))return 0;
-  const elapsed=year-(it.start??year);                 // 시작 이후 경과 연수(증가율 기준)
-  const base=it.period==='month'?it.amount*12:it.amount;
-  return base*Math.pow(1+it.rate/100,Math.max(0,elapsed));
+  const g=it.growth;
+  if(!g||g.mode==='rate'){                              // 회귀 보장: 기존 공식 그대로
+    const elapsed=year-(it.start??year);
+    const base=it.period==='month'?it.amount*12:it.amount;
+    const rate=g?g.rate:it.rate;
+    return base*Math.pow(1+rate/100,Math.max(0,elapsed));
+  }
+  return flowAnnualAt(it,year);
 }
-// 월별 모드: 그 달의 수입/지출 금액. yearFrac=소수점 연도(2026.0833…), monthIdx=시작월부터 경과 개월수.
-// 연 증가율 r%를 월 복리로 환산: (1+r/100)^(1/12), 경과기간은 개월수. 연액을 12로 나눠 월액.
+// 월별 모드: 그 달의 수입/지출 금액. yearFrac=소수점 연도, monthIdx=시작월부터 경과 개월수.
 function calcFlowMonthly(it,yearFrac,monthIdx){
   const yr=Math.floor(yearFrac+1e-9);
   if(!activeInYear(it,yr))return 0;                     // 활성 판정은 연 단위(시작~종료 연도)
-  const elapsedYears=Math.max(0,yr-(it.start??yr));     // 시작 이후 경과 연수
-  const monthsFromStart=elapsedYears*12+(monthIdx%12);  // 증가율 적용 경과 개월수
+  const g=it.growth;
   const baseAnnual=it.period==='month'?it.amount*12:it.amount;
-  const monthlyGrowth=Math.pow(1+it.rate/100,1/12);
-  return baseAnnual*Math.pow(monthlyGrowth,monthsFromStart)/12;
+  const mInYear=monthIdx%12;                            // 해당 연도 내 경과 개월(0~11)
+  if(!g||g.mode==='rate'){                              // 회귀 보장: 기존 공식 그대로
+    const elapsedYears=Math.max(0,yr-(it.start??yr));
+    const monthsFromStart=elapsedYears*12+mInYear;
+    const rate=g?g.rate:it.rate;
+    const monthlyGrowth=Math.pow(1+rate/100,1/12);
+    return baseAnnual*Math.pow(monthlyGrowth,monthsFromStart)/12;
+  }
+  // 연초 연액에서 그 해 증가분을 월 단위로 보간
+  const yrAnnual=flowAnnualAt(it,yr);                   // 그 해 연초 기준 연액
+  if(g.mode==='fixed'){                                 // 연증가액을 월 균등 가산
+    const monthlyAdd=nonNeg(g.amount)/12;
+    return (yrAnnual + monthlyAdd*mInYear)/12;
+  }
+  // custom: 그 해 구간이 amount면 월 균등 가산, rate면 월복리
+  const seg=pickSegment(g.segments,yr);
+  if(seg&&seg.method==='amount'){ const monthlyAdd=nonNeg(seg.value)/12; return (yrAnnual + monthlyAdd*mInYear)/12; }
+  const yrRate=seg?clamp(seg.value,-50,100)/100:0;
+  return yrAnnual*Math.pow(Math.pow(1+yrRate,1/12),mInYear)/12;
 }
 // 항목의 그 해 증가율(%) — custom이면 구간에서 선택
 function growthRateForYear(g,year){
@@ -1418,8 +1517,8 @@ function applyState(s){
     assetItems.push(i);
   });
   // 수입·지출: 시작이 현재보다 작으면 현재로 보정
-  (s.income||[]).forEach(i=>{ i.amount=safeNum(i.amount,0); i.rate=safeNum(i.rate,0); let st=(i.start===undefined)?realStartYear():i.start; i.start=Math.max(st,realStartYear()); if(i.end===undefined)i.end=null; incomeItems.push(i); });
-  (s.expense||[]).forEach(i=>{ i.amount=safeNum(i.amount,0); i.rate=safeNum(i.rate,0); let st=(i.start===undefined)?realStartYear():i.start; i.start=Math.max(st,realStartYear()); if(i.end===undefined)i.end=null; expenseItems.push(i); });
+  (s.income||[]).forEach(i=>{ i.amount=safeNum(i.amount,0); i.rate=safeNum(i.rate,0); let st=(i.start===undefined)?realStartYear():i.start; i.start=Math.max(st,realStartYear()); if(i.end===undefined)i.end=null; ensureFlowGrowth(i); i.growth.amount=safeNum(i.growth.amount,0); i.growth.rate=safeNum(i.growth.rate,i.rate); if(Array.isArray(i.growth.segments))i.growth.segments.forEach(seg=>{seg.value=safeNum(seg.value,0);}); incomeItems.push(i); });
+  (s.expense||[]).forEach(i=>{ i.amount=safeNum(i.amount,0); i.rate=safeNum(i.rate,0); let st=(i.start===undefined)?realStartYear():i.start; i.start=Math.max(st,realStartYear()); if(i.end===undefined)i.end=null; ensureFlowGrowth(i); i.growth.amount=safeNum(i.growth.amount,0); i.growth.rate=safeNum(i.growth.rate,i.rate); if(Array.isArray(i.growth.segments))i.growth.segments.forEach(seg=>{seg.value=safeNum(seg.value,0);}); expenseItems.push(i); });
   // 자산배분 구간: pct 클램프 + rank 보정(없으면 입력순서)
   (s.realloc||[{id:'r0',end:null,allocs:[]}]).forEach(p=>{ if(Array.isArray(p.allocs))p.allocs.forEach((a,ai)=>{ a.pct=clamp(a.pct,0,100); a.rank=Math.max(1,Math.round(safeNum(a.rank,ai+1))); }); reallocPeriods.push(p); });
   if(!reallocPeriods.length)reallocPeriods.push({id:'r0',end:null,allocs:[]});
@@ -1513,7 +1612,7 @@ function exportExcel(){
   const flowSheet=(items)=>{
     const a=[[t('xlColName'),t('xlColAmount'),t('xlColPeriod'),t('xlColRate'),t('xlColStart'),t('xlColEnd')]];
     items.forEach(it=>a.push([
-      displayName(it), won(it.amount), it.period==='month'?t('monthly'):t('yearly'), it.rate,
+      displayName(it), won(it.amount), it.period==='month'?t('monthly'):t('yearly'), growthDesc(it.growth),
       pl(it.start), (it.end==null)?t('untilEnd'):pl(it.end)
     ]));
     return XLSX.utils.aoa_to_sheet(a);
