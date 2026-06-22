@@ -1,26 +1,33 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>플랜머니 — 미래 현금흐름 시뮬레이터</title>
+<title>CashFlowery — Future Cash Flow Simulator</title>
 
 <!-- 검색 엔진용 설명 -->
-<meta name="description" content="플랜머니는 수입·지출·자산·부채를 입력해 미래 순자산과 현금흐름을 연도별·월별로 시뮬레이션하는 무료 재무 계획 도구입니다. 부채 상환 전략, 자산 배분, 목표 적립금까지 한눈에.">
-<meta name="keywords" content="현금흐름 시뮬레이터, 재무 계획, 순자산 계산기, 노후 준비, 자산 배분, 부채 상환, 플랜머니">
-<meta name="author" content="PlanMoney">
+<meta name="description" content="CashFlowery is a free financial planning tool that simulates your future net worth and cash flow year by year or month by month from your income, expenses, assets, and debts — including debt repayment strategies, asset allocation, and savings goals.">
+<meta name="keywords" content="cash flow simulator, financial planning, net worth calculator, retirement planning, asset allocation, debt repayment, CashFlowery, 현금흐름 시뮬레이터, 순자산 계산기">
+<meta name="author" content="CashFlowery">
 
 <!-- 카카오톡·페이스북 등 공유 미리보기(Open Graph) -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="플랜머니 — 미래 현금흐름 시뮬레이터">
-<meta property="og:description" content="수입·지출·자산·부채를 입력하면 미래 순자산과 현금흐름을 한눈에. 부채 상환 전략과 목표 적립금까지 시뮬레이션하는 무료 재무 계획 도구.">
-<meta property="og:locale" content="ko_KR">
-<meta property="og:site_name" content="플랜머니">
+<meta property="og:title" content="CashFlowery — Future Cash Flow Simulator">
+<meta property="og:description" content="Enter your income, expenses, assets, and debts to see your future net worth and cash flow at a glance. A free financial planning tool with debt repayment strategies and savings goals.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ko_KR">
+<meta property="og:site_name" content="CashFlowery">
+<meta property="og:url" content="https://cashflow-simulator-public.pages.dev/">
+<meta property="og:image" content="https://cashflow-simulator-public.pages.dev/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="CashFlowery — Future Cash Flow Simulator">
 
 <!-- 트위터(X) 공유 카드 -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="플랜머니 — 미래 현금흐름 시뮬레이터">
-<meta name="twitter:description" content="수입·지출·자산·부채를 입력하면 미래 순자산과 현금흐름을 한눈에. 무료 재무 계획 도구.">
+<meta name="twitter:title" content="CashFlowery — Future Cash Flow Simulator">
+<meta name="twitter:description" content="Enter your income, expenses, assets, and debts to see your future net worth and cash flow at a glance. A free financial planning tool.">
+<meta name="twitter:image" content="https://cashflow-simulator-public.pages.dev/og-image.png">
 
 <!-- 브라우저 탭 아이콘(이모지 파비콘) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
@@ -197,11 +204,11 @@
 <div id="tooltip" class="tooltip-box"></div>
 
 <header class="header">
-  <div class="header-title">💰 <span data-i18n="appTitle">플랜머니</span></div>
+  <div class="header-title">💰 <span data-i18n="appTitle">CashFlowery</span></div>
   <div class="header-actions">
     <div class="seg seg-lang" id="langSeg">
-      <button class="seg-btn active" data-lang="ko" onclick="setLang('ko')">한국어</button>
-      <button class="seg-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="seg-btn" data-lang="ko" onclick="setLang('ko')">한국어</button>
+      <button class="seg-btn active" data-lang="en" onclick="setLang('en')">EN</button>
     </div>
     <button class="btn btn-ghost" onclick="exportExcel()">📊 <span data-i18n="excel">엑셀 다운로드</span></button>
     <button class="btn btn-ghost" onclick="showQA()">💬 <span data-i18n="qa">Q&amp;A</span></button>
@@ -217,14 +224,14 @@
     <div class="unit-bar">
       <span class="unit-bar-label" data-i18n="inputUnit">입력 단위</span>
       <select class="unit-select" id="unitSelect" onchange="onUnitChange()">
-        <option value="1" data-i18n="uopt1">원 (1)</option>
+        <option value="1" selected data-i18n="uopt1">원 (1)</option>
         <option value="1000" data-i18n="uopt1000">천원 (천)</option>
-        <option value="10000" selected data-i18n="uopt10000">만원 (만)</option>
+        <option value="10000" data-i18n="uopt10000">만원 (만)</option>
         <option value="100000" data-i18n="uopt100000">십만원 (십만)</option>
         <option value="1000000" data-i18n="uopt1000000">백만원 (백만)</option>
         <option value="100000000" data-i18n="uopt100000000">억원 (억)</option>
       </select>
-      <span class="unit-desc" id="unitDesc">입력값 × 10,000 = 실제 KRW</span>
+      <span class="unit-desc" id="unitDesc">input = actual USD</span>
     </div>
 
     <div class="section">
@@ -376,12 +383,12 @@ let flowChartInst = null, assetChartInst = null;
 let idCnt = 50;
 let basis = 'year';
 let gran = 'year';   // 'year' | 'month' — 시뮬레이션 단위(연도별/월별)
-let lang = 'ko';     // 'ko' | 'en' — 표시 언어
+let lang = 'en';     // 'ko' | 'en' — 표시 언어 (기본값 영어)
 
 // ════════════════════════ i18n 사전 ════════════════════════
 const I18N={
 ko:{
-  appTitle:'플랜머니', excel:'엑셀 다운로드', qa:'Q&A', save:'저장', load:'불러오기', reset:'초기화',
+  appTitle:'CashFlowery', excel:'엑셀 다운로드', qa:'Q&A', save:'저장', load:'불러오기', reset:'초기화',
   secBasic:'기본 설정', secIncome:'수입', secExpense:'지출', secAsset:'자산 및 부채', secAlloc:'자산배분 전략',
   inputBasis:'입력 기준', basisYear:'연도 기준', basisAge:'나이 기준', startYear:'시작 연도', curAge:'현재 나이',
   simUnit:'시뮬레이션 단위', granYear:'연도별', granMonth:'월별', simPeriod:'시뮬레이션 기간',
@@ -412,7 +419,7 @@ ko:{
   newItem:'새 항목', newIncome:'새 수입', newExpense:'새 지출',
   defSalary:'근로소득', defDividend:'배당/이자', defLiving:'생활비', defHousing:'주거비', defCash:'현금/예금', defStock:'주식/투자', defMortgage:'주택담보대출',
   // 엑셀
-  xlReportTitle:'플랜머니 — 결과 보고서', xlGenTime:'생성일시', xlBasis:'입력 기준', xlStart:'시작', xlSimUnit:'시뮬레이션 단위', xlSimPeriod:'시뮬레이션 기간', xlUnit:'단위',
+  xlReportTitle:'CashFlowery — 결과 보고서', xlGenTime:'생성일시', xlBasis:'입력 기준', xlStart:'시작', xlSimUnit:'시뮬레이션 단위', xlSimPeriod:'시뮬레이션 기간', xlUnit:'단위',
   xlSheetResult:'조건 및 결과', xlSheetAsset:'자산·부채', xlSheetIncome:'수입', xlSheetExpense:'지출', xlSheetAlloc:'재투자전략',
   xlColName:'항목명', xlColCat:'구분', xlColInit:'초기금액(원)', xlColStart:'시작시점', xlColGrowth:'증가방식/이자율', xlColRepay:'상환방식', xlColMat:'만기',
   xlColAmount:'금액(원)', xlColPeriod:'주기', xlColRate:'증가율(%)', xlColEnd:'종료시점', xlColSeg:'구간', xlColTarget:'배분 대상', xlColPct:'비율(%)',
@@ -420,7 +427,7 @@ ko:{
   startYearTxt:'시작 연도 {n}년', curAgeTxt:'현재 나이 {n}세', noAlloc:'(배분 없음 — 현금 잔류)', deletedItem:'(삭제된 항목)',
 },
 en:{
-  appTitle:'PlanMoney', excel:'Excel', qa:'Q&A', save:'Save', load:'Load', reset:'Reset',
+  appTitle:'CashFlowery', excel:'Excel', qa:'Q&A', save:'Save', load:'Load', reset:'Reset',
   secBasic:'Settings', secIncome:'Income', secExpense:'Expense', secAsset:'Assets & Debts', secAlloc:'Allocation Strategy',
   inputBasis:'Input basis', basisYear:'By year', basisAge:'By age', startYear:'Start year', curAge:'Current age',
   simUnit:'Simulation unit', granYear:'Yearly', granMonth:'Monthly', simPeriod:'Simulation period',
@@ -450,7 +457,7 @@ en:{
   warnAnnEnd:'End is before start', warnAnnInput:'Enter start/end of pension',
   newItem:'New item', newIncome:'New income', newExpense:'New expense',
   defSalary:'Salary', defDividend:'Dividend·Interest', defLiving:'Living', defHousing:'Housing', defCash:'Cash·Deposit', defStock:'Stocks·Invest', defMortgage:'Mortgage',
-  xlReportTitle:'PlanMoney — Result Report', xlGenTime:'Generated', xlBasis:'Input basis', xlStart:'Start', xlSimUnit:'Simulation unit', xlSimPeriod:'Simulation period', xlUnit:'Unit',
+  xlReportTitle:'CashFlowery — Result Report', xlGenTime:'Generated', xlBasis:'Input basis', xlStart:'Start', xlSimUnit:'Simulation unit', xlSimPeriod:'Simulation period', xlUnit:'Unit',
   xlSheetResult:'Conditions & Results', xlSheetAsset:'Assets & Debts', xlSheetIncome:'Income', xlSheetExpense:'Expense', xlSheetAlloc:'Allocation',
   xlColName:'Name', xlColCat:'Type', xlColInit:'Initial (KRW)', xlColStart:'Start', xlColGrowth:'Growth/Rate', xlColRepay:'Repayment', xlColMat:'Maturity',
   xlColAmount:'Amount (KRW)', xlColPeriod:'Cycle', xlColRate:'Rate(%)', xlColEnd:'End', xlColSeg:'Period', xlColTarget:'Target', xlColPct:'Weight(%)',
@@ -606,26 +613,26 @@ function fmtShort(n){
 // ── Defaults ──
 function defaultSegments(){ return [ {end:CUR_YEAR+10,method:'rate',value:3}, {end:null,method:'rate',value:1} ]; }
 const DEFAULT_DATA = {
-  basis:'year', gran:'year', startVal:CUR_YEAR, years:20, unit:10000,
+  basis:'year', gran:'year', startVal:CUR_YEAR, years:20, unit:1,
   assets:[
-    { id:'a0', name:'현금/예금', nameKey:'defCash', amount:30000000, type:'asset', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:2,segments:defaultSegments()} },
-    { id:'a1', name:'주식/투자', nameKey:'defStock', amount:20000000, type:'asset', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:6,segments:defaultSegments()} },
-    { id:'a2', name:'주택담보대출', nameKey:'defMortgage', amount:-50000000, type:'debt', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:4,segments:defaultSegments()}, repay:{method:'equal_payment', maturity:CUR_YEAR+20} },
+    { id:'a0', name:'현금/예금', nameKey:'defCash', amount:25000, type:'asset', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:2,segments:defaultSegments()} },
+    { id:'a1', name:'주식/투자', nameKey:'defStock', amount:50000, type:'asset', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:6,segments:defaultSegments()} },
+    { id:'a2', name:'주택담보대출', nameKey:'defMortgage', amount:-250000, type:'debt', start:CUR_YEAR, growth:{mode:'rate',amount:0,rate:6,segments:defaultSegments()}, repay:{method:'equal_payment', maturity:CUR_YEAR+30} },
   ],
   income:[
-    { id:'i0', name:'근로소득', nameKey:'defSalary', amount:3500000, period:'month', rate:3, start:CUR_YEAR, end:CUR_YEAR+29 },
-    { id:'i1', name:'배당/이자', nameKey:'defDividend', amount:200000, period:'month', rate:5, start:CUR_YEAR, end:null },
+    { id:'i0', name:'근로소득', nameKey:'defSalary', amount:5000, period:'month', rate:3, start:CUR_YEAR, end:CUR_YEAR+29 },
+    { id:'i1', name:'배당/이자', nameKey:'defDividend', amount:200, period:'month', rate:5, start:CUR_YEAR, end:null },
   ],
   expense:[
-    { id:'e0', name:'생활비', nameKey:'defLiving', amount:1500000, period:'month', rate:2, start:CUR_YEAR, end:null },
-    { id:'e1', name:'주거비', nameKey:'defHousing', amount:800000, period:'month', rate:1, start:CUR_YEAR, end:null },
+    { id:'e0', name:'생활비', nameKey:'defLiving', amount:3000, period:'month', rate:2, start:CUR_YEAR, end:null },
+    { id:'e1', name:'주거비', nameKey:'defHousing', amount:1800, period:'month', rate:1, start:CUR_YEAR, end:null },
   ],
   // 자산배분 전략: 자산만 대상. pct=재투자비중, rank=처분순위(1이 최우선)
   realloc:[
     { id:'r0', end:null, allocs:[ {targetId:'a1',pct:60,rank:2}, {targetId:'a0',pct:40,rank:1} ] }
   ],
-  goal:{ enabled:true, mode:'fixed', amount:1000000000,
-    annuity:{ start:CUR_YEAR+35, end:CUR_YEAR+55, monthly:2000000, rate:3 } }
+  goal:{ enabled:true, mode:'fixed', amount:1000000,
+    annuity:{ start:CUR_YEAR+35, end:CUR_YEAR+55, monthly:4000, rate:3 } }
 };
 
 // ════════════════════════ ASSET ITEMS ════════════════════════
@@ -1646,7 +1653,7 @@ function exportExcel(){
     // 오래된 날짜 기록은 정리(최근 날짜 1개만 유지)
     localStorage.setItem(key, JSON.stringify({[dateStr]:seq}));
   }catch(e){ seq=1; }
-  const fname=(lang==='en'?`PlanMoney_${dateStr}_${seq}.xlsx`:`플랜머니_시뮬레이션_${dateStr}_${seq}.xlsx`);
+  const fname=(lang==='en'?`CashFlowery_${dateStr}_${seq}.xlsx`:`CashFlowery_시뮬레이션_${dateStr}_${seq}.xlsx`);
   try{ XLSX.writeFile(wb, fname); showMsg(t('msgExcel')); }
   catch(e){ showMsg(t('msgExcelFail')); }
 }
