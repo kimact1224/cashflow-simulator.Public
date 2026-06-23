@@ -471,6 +471,9 @@ function t(key,vars){
   return s;
 }
 // 항목 표시 이름: 기본 항목(nameKey 보유)은 언어별 번역, 사용자 수정/생성 항목은 입력한 name 그대로
+// XSS 방어: innerHTML 템플릿에 사용자 입력(항목 이름 등)을 넣기 전 HTML 특수문자를 이스케이프.
+// 속성값(" ')과 태그(< >), 앰퍼샌드(&)를 엔티티로 변환해 속성 탈출/태그 주입을 차단.
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function displayName(it){ return (it && it.nameKey) ? t(it.nameKey) : (it?it.name:''); }
 function setLang(l){
   if(l===lang)return; lang=l;
@@ -739,7 +742,7 @@ function renderAssets(){
     }
     div.innerHTML=`
       <div class="item-card-header">
-        <input class="item-name-input" type="text" value="${displayName(it)}" oninput="setAssetField('${it.id}','name',this.value)" placeholder="${t('itemName')}">
+        <input class="item-name-input" type="text" value="${esc(displayName(it))}" oninput="setAssetField('${it.id}','name',this.value)" placeholder="${esc(t('itemName'))}">
         <button class="btn-icon" onclick="removeAssetItem('${it.id}')">✕</button>
       </div>
       <div class="item-grid2">
@@ -849,7 +852,7 @@ function renderList(elId,items,type){
     const div=document.createElement('div'); div.className='item-card';
     div.innerHTML=`
       <div class="item-card-header">
-        <input class="item-name-input" type="text" value="${displayName(it)}" oninput="setField('${type}','${it.id}','name',this.value)" placeholder="${t('itemName')}">
+        <input class="item-name-input" type="text" value="${esc(displayName(it))}" oninput="setField('${type}','${it.id}','name',this.value)" placeholder="${esc(t('itemName'))}">
         <button class="btn-icon" onclick="removeItem('${type}','${it.id}')">✕</button>
       </div>
       <div class="item-grid3">
@@ -906,7 +909,7 @@ function renderRealloc(){
   reallocPeriods.forEach((p,pi)=>{
     const isLastPeriod = pi===reallocPeriods.length-1;
     const sum=p.allocs.reduce((s,a)=>s+(+a.pct||0),0);
-    const optsHtml=assetOnly.map(it=>`<option value="${it.id}">✅ ${displayName(it)}</option>`).join('');
+    const optsHtml=assetOnly.map(it=>`<option value="${it.id}">✅ ${esc(displayName(it))}</option>`).join('');
     const div=document.createElement('div'); div.className='realloc-period';
     div.innerHTML=`
       <div class="realloc-period-head">
@@ -1466,13 +1469,13 @@ const tooltipEl=document.getElementById('tooltip');
 function showTooltip(e,row){
   let h=`<div class="tooltip-title">${periodLabel(row.year)} ${t("ttDetail")}</div>`;
   if(row.incomeDetail.length){ h+=`<div style="color:#94a3b8;font-size:10px;margin-bottom:3px">${t("ttIncome")}</div>`;
-    row.incomeDetail.forEach(d=>h+=`<div class="tooltip-row"><span class="tooltip-label">${d.dname||d.name}</span><span style="color:#4ade80">${fmt(d.amount)}</span></div>`);
+    row.incomeDetail.forEach(d=>h+=`<div class="tooltip-row"><span class="tooltip-label">${esc(d.dname||d.name)}</span><span style="color:#4ade80">${fmt(d.amount)}</span></div>`);
     h+=`<div class="tooltip-divider"></div>`; }
   if(row.expenseDetail.length){ h+=`<div style="color:#94a3b8;font-size:10px;margin-bottom:3px">${t("ttExpense")}</div>`;
-    row.expenseDetail.forEach(d=>h+=`<div class="tooltip-row"><span class="tooltip-label">${d.dname||d.name}</span><span style="color:#f87171">${fmt(d.amount)}</span></div>`); }
+    row.expenseDetail.forEach(d=>h+=`<div class="tooltip-row"><span class="tooltip-label">${esc(d.dname||d.name)}</span><span style="color:#f87171">${fmt(d.amount)}</span></div>`); }
   h+=`<div class="tooltip-divider"></div>`;
   h+=`<div style="color:#94a3b8;font-size:10px;margin-bottom:3px">${t("ttBalances")}</div>`;
-  row.balances.forEach(b=>{ if(b.value===0)return; h+=`<div class="tooltip-row"><span class="tooltip-label">${b.type==='debt'?'🔴 ':''}${b.name}</span><span style="color:${b.value>=0?'#4ade80':'#f87171'}">${fmt(b.value)}</span></div>`; });
+  row.balances.forEach(b=>{ if(b.value===0)return; h+=`<div class="tooltip-row"><span class="tooltip-label">${b.type==='debt'?'🔴 ':''}${esc(b.name)}</span><span style="color:${b.value>=0?'#4ade80':'#f87171'}">${fmt(b.value)}</span></div>`; });
   h+=`<div class="tooltip-divider"></div>`;
   h+=`<div class="tooltip-row"><span class="tooltip-label">${t("netCashflow")}</span><span style="color:${row.net>=0?'#60a5fa':'#fb923c'}">${fmt(row.net)}</span></div>`;
   h+=`<div class="tooltip-row"><span class="tooltip-label">${t("netWorth")}</span><span style="color:${row.asset>=0?'#4ade80':'#f87171'};font-weight:600">${fmt(row.asset)}</span></div>`;
